@@ -60,6 +60,7 @@ INSTALLED_APPS = [
 
     # Project apps
     'accounts',
+    'patients',
 ]
 
 
@@ -68,23 +69,13 @@ INSTALLED_APPS = [
 # =========================================================
 
 MIDDLEWARE = [
-
-    'django.middleware.security.SecurityMiddleware',
-
-    # IMPORTANT:
-    # Must be placed before CommonMiddleware.
     'corsheaders.middleware.CorsMiddleware',
-
+    'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-
     'django.middleware.common.CommonMiddleware',
-
     'django.middleware.csrf.CsrfViewMiddleware',
-
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-
     'django.contrib.messages.middleware.MessageMiddleware',
-
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
@@ -310,3 +301,8 @@ SIMPLE_JWT = {
 
     'UPDATE_LAST_LOGIN': True,
 }
+
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:4200',
+    'http://127.0.0.1:4200',
+]

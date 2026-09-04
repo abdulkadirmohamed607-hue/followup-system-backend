@@ -12,4 +12,8 @@ urlpatterns = [
         'api/auth/',
         include('accounts.urls'),
     ),
+    path(
+        'api/',
+        include('patients.urls')
+    ),
 ]
