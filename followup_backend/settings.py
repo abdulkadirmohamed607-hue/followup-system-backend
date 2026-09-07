@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
+from decouple import config
 
 
 # =========================================================
@@ -144,29 +145,18 @@ WSGI_APPLICATION = 'followup_backend.wsgi.application'
 # =========================================================
 
 DATABASES = {
-
     'default': {
+        'ENGINE': 'django.db.backends.postgresql',
 
-        'ENGINE':
-            'django.db.backends.postgresql',
+        'NAME': config('DB_NAME'),
 
-        'NAME':
-            'followup_system',
+        'USER': config('DB_USER'),
 
-        'USER':
-            'postgres',
+        'PASSWORD': config('DB_PASSWORD'),
 
-        # IMPORTANT:
-        # Put your existing PostgreSQL password here locally.
-        # Do NOT commit this password to GitHub.
-        'PASSWORD':
-            'mohammed 1625',
+        'HOST': config('DB_HOST', default='localhost'),
 
-        'HOST':
-            'localhost',
-
-        'PORT':
-            '5432',
+        'PORT': config('DB_PORT', default='5432'),
     }
 }
 
