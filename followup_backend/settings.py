@@ -45,7 +45,7 @@ DEBUG = config(
 
 ALLOWED_HOSTS = config(
     'ALLOWED_HOSTS',
-    default='127.0.0.1,localhost',
+    default='127.0.0.1,localhost,.onrender.com',
     cast=Csv()
 )
 
