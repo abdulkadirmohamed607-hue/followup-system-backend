@@ -7,16 +7,32 @@ class Patient(models.Model):
         ADMITTED = 'Admitted', 'Admitted'
         DISCHARGED = 'Discharged', 'Discharged'
 
-    first_name = models.CharField(max_length=100)
-    second_name = models.CharField(max_length=100)
-    last_name = models.CharField(max_length=100)
+    first_name = models.CharField(
+        max_length=100
+    )
+
+    second_name = models.CharField(
+        max_length=100
+    )
+
+    last_name = models.CharField(
+        max_length=100
+    )
 
     patient_number = models.CharField(
         max_length=50,
         unique=True
     )
 
-    ward = models.CharField(max_length=100)
+    gender = models.CharField(
+        max_length=20,
+        blank=True,
+        default=''
+    )
+
+    ward = models.CharField(
+        max_length=100
+    )
 
     admission_date = models.DateField()
 

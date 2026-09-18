@@ -96,6 +96,7 @@ INSTALLED_APPS = [
     'accounts',
     'patients',
     'visits',
+    'system_settings',
 ]
 
 

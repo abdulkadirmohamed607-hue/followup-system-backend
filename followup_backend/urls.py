@@ -20,4 +20,8 @@ urlpatterns = [
         'api/',
         include('visits.urls')
     ),
+     path(
+        'api/',
+        include('system_settings.urls')
+    ),
 ]
