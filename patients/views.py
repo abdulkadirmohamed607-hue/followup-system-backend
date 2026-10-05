@@ -78,6 +78,12 @@ class PatientViewSet(viewsets.ModelViewSet):
 
         for item in patients_data:
 
+            if not isinstance(
+                item,
+                dict
+            ):
+                continue
+
             patient_number = str(
                 item.get(
                     'patient_number',
@@ -86,27 +92,22 @@ class PatientViewSet(viewsets.ModelViewSet):
             ).strip().upper()
 
             if patient_number:
+
                 patient_numbers.append(
                     patient_number
                 )
 
         # ---------------------------------------------------------
-        # EXISTING PATIENT NUMBERS
-        # ONE DATABASE QUERY ONLY
+        # EXISTING PATIENTS
         # ---------------------------------------------------------
 
-        existing_numbers = set(
-            Patient.objects.filter(
+        existing_patients = {
+            str(patient.patient_number)
+            .strip()
+            .upper(): patient
+            for patient in Patient.objects.filter(
                 patient_number__in=patient_numbers
-            ).values_list(
-                'patient_number',
-                flat=True
             )
-        )
-
-        existing_numbers = {
-            str(number).strip().upper()
-            for number in existing_numbers
         }
 
         # ---------------------------------------------------------
@@ -115,13 +116,19 @@ class PatientViewSet(viewsets.ModelViewSet):
 
         patients_to_create = []
 
-        skipped_existing = []
+        patients_to_update = []
+
+        updated_patient_numbers = []
 
         skipped_duplicate_file = []
 
         validation_errors = []
 
         seen_numbers = set()
+
+        # ---------------------------------------------------------
+        # PROCESS EACH EXCEL ROW
+        # ---------------------------------------------------------
 
         for index, item in enumerate(
             patients_data,
@@ -204,6 +211,24 @@ class PatientViewSet(viewsets.ModelViewSet):
             ).strip()
 
             # -----------------------------------------------------
+            # NORMALIZE STATUS
+            # -----------------------------------------------------
+
+            status_lower = status_value.lower()
+
+            if status_lower == 'admitted':
+
+                status_value = 'Admitted'
+
+            elif status_lower == 'discharged':
+
+                status_value = 'Discharged'
+
+            else:
+
+                status_value = 'Admitted'
+
+            # -----------------------------------------------------
             # VALIDATE REQUIRED FIELDS
             # -----------------------------------------------------
 
@@ -267,30 +292,61 @@ class PatientViewSet(viewsets.ModelViewSet):
             )
 
             # -----------------------------------------------------
-            # ALREADY EXISTS IN DATABASE
+            # CHECK IF PATIENT ALREADY EXISTS
             # -----------------------------------------------------
 
-            if patient_number in existing_numbers:
+            existing_patient = (
+                existing_patients.get(
+                    patient_number
+                )
+            )
 
-                skipped_existing.append(
+            # -----------------------------------------------------
+            # EXISTING PATIENT -> UPDATE
+            # -----------------------------------------------------
+
+            if existing_patient:
+
+                existing_patient.first_name = (
+                    first_name
+                )
+
+                existing_patient.second_name = (
+                    second_name
+                )
+
+                existing_patient.last_name = (
+                    last_name
+                )
+
+                existing_patient.gender = (
+                    gender
+                )
+
+                existing_patient.ward = (
+                    ward
+                )
+
+                existing_patient.admission_date = (
+                    admission_date
+                )
+
+                existing_patient.status = (
+                    status_value
+                )
+
+                patients_to_update.append(
+                    existing_patient
+                )
+
+                updated_patient_numbers.append(
                     patient_number
                 )
 
                 continue
 
             # -----------------------------------------------------
-            # NORMALIZE STATUS
-            # -----------------------------------------------------
-
-            if status_value not in [
-                'Admitted',
-                'Discharged'
-            ]:
-
-                status_value = 'Admitted'
-
-            # -----------------------------------------------------
-            # CREATE MODEL INSTANCE
+            # NEW PATIENT -> CREATE
             # -----------------------------------------------------
 
             patients_to_create.append(
@@ -320,8 +376,9 @@ class PatientViewSet(viewsets.ModelViewSet):
                     ),
                     'errors': validation_errors,
                     'created_count': 0,
-                    'skipped_existing': (
-                        skipped_existing
+                    'updated_count': 0,
+                    'updated_patient_numbers': (
+                        updated_patient_numbers
                     ),
                     'skipped_duplicate_file': (
                         skipped_duplicate_file
@@ -331,17 +388,20 @@ class PatientViewSet(viewsets.ModelViewSet):
             )
 
         # ---------------------------------------------------------
-        # BULK INSERT
-        # ONE DATABASE OPERATION
+        # DATABASE OPERATIONS
         # ---------------------------------------------------------
 
         created_patients = []
 
-        if patients_to_create:
+        try:
 
-            try:
+            with transaction.atomic():
 
-                with transaction.atomic():
+                # -------------------------------------------------
+                # CREATE NEW PATIENTS
+                # -------------------------------------------------
+
+                if patients_to_create:
 
                     created_patients = (
                         Patient.objects.bulk_create(
@@ -350,17 +410,37 @@ class PatientViewSet(viewsets.ModelViewSet):
                         )
                     )
 
-            except Exception as error:
+                # -------------------------------------------------
+                # UPDATE EXISTING PATIENTS
+                # -------------------------------------------------
 
-                return Response(
-                    {
-                        'detail': (
-                            'Patient bulk upload failed.'
-                        ),
-                        'error': str(error)
-                    },
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+                if patients_to_update:
+
+                    Patient.objects.bulk_update(
+                        patients_to_update,
+                        [
+                            'first_name',
+                            'second_name',
+                            'last_name',
+                            'gender',
+                            'ward',
+                            'admission_date',
+                            'status',
+                        ],
+                        batch_size=500
+                    )
+
+        except Exception as error:
+
+            return Response(
+                {
+                    'detail': (
+                        'Patient bulk upload failed.'
+                    ),
+                    'error': str(error)
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         # ---------------------------------------------------------
         # SERIALIZE CREATED PATIENTS
@@ -383,14 +463,14 @@ class PatientViewSet(viewsets.ModelViewSet):
                 'created_count': len(
                     created_patients
                 ),
-                'skipped_existing_count': len(
-                    skipped_existing
+                'updated_count': len(
+                    patients_to_update
+                ),
+                'updated_patient_numbers': (
+                    updated_patient_numbers
                 ),
                 'skipped_duplicate_file_count': len(
                     skipped_duplicate_file
-                ),
-                'skipped_existing': (
-                    skipped_existing
                 ),
                 'skipped_duplicate_file': (
                     skipped_duplicate_file
