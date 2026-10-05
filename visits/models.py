@@ -70,7 +70,8 @@ class Visit(models.Model):
     )
 
     second_name = models.CharField(
-        max_length=100
+        max_length=100,
+	blank=True
     )
 
     last_name = models.CharField(
@@ -82,7 +83,8 @@ class Visit(models.Model):
     )
 
     card_number = models.CharField(
-        max_length=50
+        max_length=50,
+	blank=True
     )
 
 
